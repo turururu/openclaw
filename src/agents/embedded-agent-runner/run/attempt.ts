@@ -2463,6 +2463,8 @@ export async function runEmbeddedAttempt(
       const boundaryTimezone = isRawModelRun
         ? undefined
         : resolveUserTimezone(params.config?.agents?.defaults?.userTimezone);
+      const includeBoundaryTimestamp =
+        !isRawModelRun && params.config?.agents?.defaults?.envelopeTimestamp !== "off";
       let currentUserTimestampOverride:
         | { timestamp: number; text: string; alternateText?: string }
         | undefined;
@@ -2472,6 +2474,7 @@ export async function runEmbeddedAttempt(
         }
         return {
           ...(boundaryTimezone ? { timezone: boundaryTimezone } : {}),
+          ...(includeBoundaryTimestamp ? {} : { includeTimestamp: false }),
           ...(currentUserTimestampOverride ? { currentUserTimestampOverride } : {}),
         };
       };
@@ -4120,6 +4123,7 @@ export async function runEmbeddedAttempt(
             messages: messagesForCurrentPrompt,
             prompt: promptForModel,
             ...(boundaryTimezone ? { timezone: boundaryTimezone } : {}),
+            ...(includeBoundaryTimestamp ? {} : { includeTimestamp: false }),
             ...(typeof preparedUserTurnMessage?.timestamp === "number"
               ? { currentUserTimestamp: preparedUserTurnMessage.timestamp }
               : {}),
@@ -4399,6 +4403,7 @@ export async function runEmbeddedAttempt(
           const llmBoundaryPromptForPrecheck = normalizeCurrentPromptTextForLlmBoundary({
             prompt: promptForModel,
             ...(boundaryTimezone ? { timezone: boundaryTimezone } : {}),
+            ...(includeBoundaryTimestamp ? {} : { includeTimestamp: false }),
             ...(typeof preparedUserTurnMessage?.timestamp === "number"
               ? { currentUserTimestamp: preparedUserTurnMessage.timestamp }
               : {}),
@@ -4434,9 +4439,13 @@ export async function runEmbeddedAttempt(
               });
           }
 
-          const llmBoundaryOptionsForPrecheck = boundaryTimezone
-            ? { timezone: boundaryTimezone }
-            : undefined;
+          const llmBoundaryOptionsForPrecheck =
+            boundaryTimezone || !includeBoundaryTimestamp
+              ? {
+                  ...(boundaryTimezone ? { timezone: boundaryTimezone } : {}),
+                  ...(includeBoundaryTimestamp ? {} : { includeTimestamp: false }),
+                }
+              : undefined;
           const unwindowedLlmBoundaryMessagesForPrecheck =
             contextEnginePromptAuthority === "preassembly_may_overflow" &&
             unwindowedContextEngineMessagesForPrecheck
